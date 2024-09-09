@@ -4,30 +4,22 @@ use crate::{ resources::*, components::* };
 
 pub fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: ResMut<AssetServer>,
     mut windows: Query<&mut Window>
 ) {
-    windows.single_mut().resolution.set(600.0, 600.0);
+    windows.single_mut().resolution.set(1280.0, 720.0);
     commands.spawn(Camera2dBundle::default());
 
-    let player_handle = Mesh2dHandle(meshes.add(Rectangle::new(20.0, 50.0)));
-    let player_bundle = MaterialMesh2dBundle {
-        mesh: player_handle,
-        material: materials.add(Color::srgb(0.0, 255.0, 0.0)),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    };
-    commands.spawn((Player, player_bundle));
+    commands.spawn((
+        Player,
+        SpriteBundle {
+            texture: asset_server.load("textures/human.png"),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            ..default()
+        },
+    ));
 
-    let conveyor_handle = Mesh2dHandle(meshes.add(Rectangle::new(200.0, 20.0)));
-    let conveyor_bundle = MaterialMesh2dBundle {
-        mesh: conveyor_handle,
-        material: materials.add(Color::srgb(127.0, 127.0, 200.0)),
-        transform: Transform::from_xyz(-100.0, 0.0, 0.0),
-        ..default()
-    };
-    commands.spawn((Conveyor, conveyor_bundle));
+    spawn_conveyor(commands, &asset_server, Transform::from_xyz(-200.0, 0.0, 0.0));
 }
 
 pub fn player_movement_system(
@@ -38,11 +30,9 @@ pub fn player_movement_system(
     let player_transform = binding.as_mut();
     if keys.pressed(KeyCode::ArrowUp) {
         player_transform.translation.y += 5.0;
-        player_transform.translation.z += 0.01;
     }
     if keys.pressed(KeyCode::ArrowDown) {
         player_transform.translation.y -= 5.0;
-        player_transform.translation.z -= 0.01;
     }
     if keys.pressed(KeyCode::ArrowLeft) {
         player_transform.translation.x -= 5.0;
@@ -54,31 +44,25 @@ pub fn player_movement_system(
 
 pub fn shape_spawner_system(
     mut commands: Commands,
+    asset_server: ResMut<AssetServer>,
     time: Res<Time>,
     mut timer: ResMut<ConveyorTimer>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    query: Query<(&Mesh2dHandle, &Transform), With<Conveyor>>
+    query: Query<&Transform, With<ConveyorGenerator>>
 ) {
     if timer.0.tick(time.delta()).just_finished() {
-        for (mesh, transform) in &query {
-            let shape_handle = Mesh2dHandle(
-                meshes.add(
-                    Triangle2d::new(Vec2::Y * 10.0, Vec2::new(-10.0, -10.0), Vec2::new(10.0, -10.0))
-                )
-            );
+        for transform in &query {
             let shape_transform = Transform::from_xyz(
-                transform.translation.x - 100.0,
-                transform.translation.y + 20.0,
-                0.0
+                transform.translation.x,
+                transform.translation.y + 10.0,
+                0.1
             );
-            let shape_bundle = MaterialMesh2dBundle {
-                mesh: shape_handle,
-                material: materials.add(Color::srgb(255.0, 0.0, 0.0)),
-                transform: shape_transform,
-                ..default()
-            };
-            commands.spawn((Shape::Triangle, shape_bundle));
+            let shape = random_shape();
+            let shape_color = random_color();
+            commands.spawn((
+                shape,
+                shape_color,
+                generate_shape_sprite(&asset_server, shape, shape_color, shape_transform),
+            ));
         }
     }
 }
@@ -86,5 +70,95 @@ pub fn shape_spawner_system(
 pub fn shapes_movement_system(mut query: Query<&mut Transform, With<Shape>>) {
     for mut shape_transform in &mut query {
         shape_transform.translation.x += 0.5;
+    }
+}
+
+pub fn shapes_despawning_system(
+    mut commands: Commands,
+    shapes: Query<(Entity, &Transform), With<Shape>>,
+    bins: Query<&Transform, With<ConveyorBin>>
+) {
+    // Check if shape collides with any bin
+    for (shape_entity, shape) in &shapes {
+        for bin in &bins {
+            if
+                shape.translation.x > bin.translation.x - 64.0 &&
+                shape.translation.x < bin.translation.x + 64.0
+            {
+                commands.entity(shape_entity).despawn();
+                break;
+            }
+        }
+    }
+}
+
+fn spawn_conveyor(
+    mut commands: Commands,
+    asset_server: &ResMut<AssetServer>,
+    generator_transform: Transform
+) {
+    let belt_transform = Transform::from_xyz(
+        generator_transform.translation.x + 128.0,
+        generator_transform.translation.y,
+        0.0
+    );
+    let bin_transform = Transform::from_xyz(
+        generator_transform.translation.x + 300.0,
+        generator_transform.translation.y,
+        0.0
+    );
+    commands.spawn((
+        ConveyorBelt,
+        SpriteBundle {
+            texture: asset_server.load("textures/conveyor_belt.png"),
+            transform: belt_transform,
+            ..default()
+        },
+    ));
+    commands.spawn((
+        ConveyorGenerator,
+        SpriteBundle {
+            texture: asset_server.load("textures/conveyor_generator.png"),
+            transform: generator_transform,
+            ..default()
+        },
+    ));
+    commands.spawn((
+        ConveyorBin,
+        SpriteBundle {
+            texture: asset_server.load("textures/conveyor_bin.png"),
+            transform: bin_transform,
+            ..default()
+        },
+    ));
+}
+
+fn generate_shape_sprite(
+    asset_server: &ResMut<AssetServer>,
+    shape: Shape,
+    color: ShapeColor,
+    transform: Transform
+) -> SpriteBundle {
+    let shape_name = match shape {
+        Shape::Triangle => "triangle",
+        Shape::Circle => "circle",
+        Shape::Square => "square",
+        Shape::Star => "circle",
+        Shape::Rectangle => "circle",
+    };
+    let color_name = match color {
+        ShapeColor::Red => "gray",
+        ShapeColor::Orange => "gray",
+        ShapeColor::Yellow => "gray",
+        ShapeColor::Green => "gray",
+        ShapeColor::Blue => "gray",
+        ShapeColor::Purple => "gray",
+        ShapeColor::Pink => "gray",
+    };
+
+    SpriteBundle {
+        texture: asset_server.load(format!("textures/shape_{}_{}.png", shape_name, color_name)),
+        transform,
+        ..default()
     }
 }

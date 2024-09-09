@@ -13,6 +13,8 @@ fn main() {
         .add_plugins((DefaultPlugins, Wireframe2dPlugin))
         .add_plugins(ShapeConveyorPlugin)
         .add_systems(Startup, setup)
-        .add_systems(Update, (player_movement_system, shape_spawner_system, shapes_movement_system))
+        .add_systems(Update, (
+            player_movement_system,
+        ))
         .run();
 }
