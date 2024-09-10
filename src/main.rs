@@ -1,7 +1,11 @@
+#![allow(dead_code)]
+
+use bevy::render::camera::ScalingMode;
 use bevy::prelude::*;
 
 const GRID_SIZE: (usize, usize) = (30, 30);
-const TILE_WIDTH: usize = 32;
+const TILE_WIDTH: usize = 64;
+const CAMERA_SPEED: f32 = 300.0;
 
 enum Tile {
     SmallHouse,
@@ -10,7 +14,7 @@ enum Tile {
     Wiring,
     Plumbing,
     Road,
-    PowerStation,
+    PowerPlant,
     WaterSource,
     Empty,
 }
@@ -24,9 +28,9 @@ struct TileBundle {
 impl Tile {
     fn sprite_path(&self) -> String {
         match &self {
-            Tile::SmallHouse => "sprites/small_house.png".to_string(),
-            Tile::MediumHouse => "sprites/medium_house.png".to_string(),
-            _ => "blah".to_string(),
+	    Tile::SmallHouse => "sprites/small_house.png".to_string(),
+	    Tile::PowerPlant => "sprites/powerplant.png".to_string(),
+            _ => "sprites/empty.png".to_string(),
         }
     }
 }
@@ -35,8 +39,8 @@ impl Tile {
 struct Position(usize, usize);
 
 fn put_tile(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
     kind: Tile,
     pos: (usize, usize)
 ) {
@@ -71,16 +75,58 @@ fn give_money(mut wallet: ResMut<Wallet>, tiles: Query<&TileBundle>) {
 }
 
 fn main() {
-    let _app = App::new().add_plugins(DefaultPlugins).add_systems(Startup, setup).run();
+    let _app = App::new()
+	.add_plugins(DefaultPlugins
+		     .set(ImagePlugin::default_nearest()))
+	.add_systems(Startup, setup)
+	.add_systems(Update, update_tile_sprite_positions)
+	.add_systems(FixedUpdate, move_camera)
+	.insert_resource(ClearColor(Color::srgb(1.0, 1.0, 1.0)))
+	.run();
 }
 
-fn setup(commands: Commands, asset_server: Res<AssetServer>) {
-    put_tile(commands, asset_server, Tile::SmallHouse, (3, 3));
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>
+) {
+    let mut camera = Camera2dBundle::default();
+    camera.projection.scaling_mode = ScalingMode::FixedVertical(1600.0);
+
+    commands.spawn(Camera2dBundle::default());
+    put_tile(&mut commands, &asset_server, Tile::SmallHouse, (1, 0));
+    put_tile(&mut commands, &asset_server, Tile::PowerPlant, (1, 1));
+}
+
+fn move_camera(
+    mut query: Query<&mut Transform, With<Camera>>,
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    let mut camera_transform = query.single_mut();
+    let mut direction = (0.0, 0.0); // x, y
+
+    if keys.pressed(KeyCode::KeyW) {
+	direction.1 += 1.0;
+    };
+    if keys.pressed(KeyCode::KeyA) {
+	direction.0 -= 1.0;
+    };
+    if keys.pressed(KeyCode::KeyS) {
+	direction.1 -= 1.0;
+    };
+    if keys.pressed(KeyCode::KeyD) {
+	direction.0 += 1.0;
+    };
+
+    direction.0 = direction.0 * CAMERA_SPEED * time.delta_seconds();
+    direction.1 = direction.1 * CAMERA_SPEED * time.delta_seconds();
+    camera_transform.translation.x += direction.0;
+    camera_transform.translation.y += direction.1;
 }
 
 // TODOs:
 // - make a house
 
-// unimportant:
+// not urgent:
 // - find a better way to handle Resources (stuff like `resource.0`
-// for value access)
+// for value access looks like shit)
