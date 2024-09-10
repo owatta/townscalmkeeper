@@ -4,7 +4,8 @@ use bevy::render::camera::ScalingMode;
 use bevy::prelude::*;
 
 const GRID_SIZE: (usize, usize) = (30, 30);
-const TILE_WIDTH: usize = 64;
+
+const TILE_WIDTH: isize = 64;
 const CAMERA_SPEED: f32 = 300.0;
 
 enum Tile {
@@ -18,6 +19,9 @@ enum Tile {
     WaterSource,
     Empty,
 }
+
+#[derive(Resource)]
+struct IncomeTimer(Timer);
 
 #[derive(Component)]
 struct TileBundle {
@@ -36,13 +40,13 @@ impl Tile {
 }
 
 #[derive(Component)]
-struct Position(usize, usize);
+struct Position(isize, isize);
 
 fn put_tile(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
     kind: Tile,
-    pos: (usize, usize)
+    pos: (isize, isize)
 ) {
     let sprite = SpriteBundle {
         texture: asset_server.load(kind.sprite_path()),
@@ -78,10 +82,11 @@ fn main() {
     let _app = App::new()
 	.add_plugins(DefaultPlugins
 		     .set(ImagePlugin::default_nearest()))
+	.insert_resource(ClearColor(Color::srgb(1.0, 1.0, 1.0)))
+	.insert_resource(IncomeTimer(Timer::from_seconds(5.0, TimerMode::Repeating)))
 	.add_systems(Startup, setup)
 	.add_systems(Update, update_tile_sprite_positions)
 	.add_systems(FixedUpdate, move_camera)
-	.insert_resource(ClearColor(Color::srgb(1.0, 1.0, 1.0)))
 	.run();
 }
 
