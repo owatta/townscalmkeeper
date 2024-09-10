@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 const GRID_SIZE: (usize, usize) = (30, 30);
-const TILE_WIDTH: usize = 32;
+const TILE_WIDTH: isize = 64;
 
 enum Tile {
     SmallHouse,
@@ -14,6 +14,9 @@ enum Tile {
     WaterSource,
     Empty,
 }
+
+#[derive(Resource)]
+struct IncomeTimer(Timer);
 
 #[derive(Component)]
 struct TileBundle {
@@ -32,13 +35,13 @@ impl Tile {
 }
 
 #[derive(Component)]
-struct Position(usize, usize);
+struct Position(isize, isize);
 
 fn put_tile(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
     kind: Tile,
-    pos: (usize, usize)
+    pos: (isize, isize)
 ) {
     let sprite = SpriteBundle {
         texture: asset_server.load(kind.sprite_path()),
@@ -71,11 +74,16 @@ fn give_money(mut wallet: ResMut<Wallet>, tiles: Query<&TileBundle>) {
 }
 
 fn main() {
-    let _app = App::new().add_plugins(DefaultPlugins).add_systems(Startup, setup).run();
+    let _app = App::new()
+        .add_plugins(DefaultPlugins)
+        .insert_resource(IncomeTimer(Timer::from_seconds(5.0, TimerMode::Repeating)))
+        .add_systems(Startup, setup)
+        .add_systems(Update, update_tile_sprite_positions)
+        .run();
 }
 
-fn setup(commands: Commands, asset_server: Res<AssetServer>) {
-    put_tile(commands, asset_server, Tile::SmallHouse, (3, 3));
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    put_tile(&mut commands, &asset_server, Tile::SmallHouse, (3, 3));
 }
 
 // TODOs:
