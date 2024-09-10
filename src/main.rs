@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use bevy::render::camera::ScalingMode;
 use bevy::prelude::*;
 
@@ -56,8 +54,6 @@ fn put_tile(
 }
 
 fn update_tile_sprite_positions(mut tiles: Query<(&Position, &mut Transform)>) {
-    // determines each tile's position
-    // puts appropriate Transform value
     for (pos, mut transform) in &mut tiles {
         transform.translation.x = (pos.0 * TILE_WIDTH) as f32;
         transform.translation.y = (pos.1 * TILE_WIDTH) as f32;
