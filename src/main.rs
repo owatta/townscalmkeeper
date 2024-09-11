@@ -134,8 +134,5 @@ fn move_camera(
 }
 
 // TODOs:
-// - make a house
-
-// not urgent:
 // - find a better way to handle Resources (stuff like `resource.0`
 // for value access looks like shit)
