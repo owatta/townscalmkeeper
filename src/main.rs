@@ -22,6 +22,9 @@ enum Tile {
 struct IncomeTimer(Timer);
 
 #[derive(Component)]
+struct Label;
+
+#[derive(Component)]
 struct TileBundle {
     kind: Tile,
     sprite: SpriteBundle,
@@ -100,10 +103,49 @@ fn setup(
 ) {
     let mut camera = Camera2dBundle::default();
     camera.projection.scaling_mode = ScalingMode::FixedVertical(1600.0);
+    commands.spawn((Camera2dBundle::default(), IsDefaultUiCamera));
 
-    commands.spawn(Camera2dBundle::default());
+    setup_ui(&mut commands, &asset_server);
+    
     put_tile(&mut commands, &asset_server, Tile::SmallHouse, (1, 0));
     put_tile(&mut commands, &asset_server, Tile::PowerPlant, (1, 1));
+}
+
+fn setup_ui(commands: &mut Commands, asset_server: &Res<AssetServer> ) {
+    commands.spawn(NodeBundle {
+        style: Style {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            justify_content: JustifyContent::SpaceBetween,
+            // align_content: AlignContent::End,
+            align_items: AlignItems::End,
+            ..default()
+        },
+        ..default()
+    })
+    .with_children(|parent| {
+        parent.spawn(NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Px(100.),
+                border: UiRect::all(Val::Px(5.)),
+                ..default()
+            },
+            background_color: Color::srgb(0.65, 0.65, 0.65).into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn((
+                TextBundle::from_section("Text", TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 30.0,
+                    color: Color::srgb(0.0, 0.0, 0.0),
+                    ..default()
+                }),
+                Label,
+            ));
+        });
+    });
 }
 
 fn move_camera(
