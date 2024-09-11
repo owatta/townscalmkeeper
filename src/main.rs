@@ -6,6 +6,7 @@ const GRID_SIZE: (usize, usize) = (30, 30);
 const TILE_WIDTH: isize = 64;
 const CAMERA_SPEED: f32 = 300.0;
 
+#[derive(Component, Clone)]
 enum Tile {
     SmallHouse,
     MediumHouse,
@@ -24,10 +25,11 @@ struct IncomeTimer(Timer);
 #[derive(Component)]
 struct Label;
 
-#[derive(Component)]
+#[derive(Bundle)]
 struct TileBundle {
     kind: Tile,
     sprite: SpriteBundle,
+    position: Position,
 }
 
 impl Tile {
@@ -47,13 +49,17 @@ fn put_tile(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
     kind: Tile,
-    pos: (isize, isize)
+    position: Position
 ) {
-    let sprite = SpriteBundle {
-        texture: asset_server.load(kind.sprite_path()),
-        ..default()
+    let tile = TileBundle {
+	kind: kind.clone(),
+	sprite: SpriteBundle {
+            texture: asset_server.load(kind.sprite_path()),
+            ..default()
+	},
+	position,
     };
-    commands.spawn((Position(pos.0, pos.1), sprite));
+    commands.spawn(tile);
 }
 
 fn update_tile_sprite_positions(mut tiles: Query<(&Position, &mut Transform)>) {
@@ -70,13 +76,13 @@ fn give_money(
     time: Res<Time>,
     mut timer: ResMut<IncomeTimer>,
     mut wallet: ResMut<Wallet>,
-    tiles: Query<&TileBundle>
+    tiles: Query<&Tile>
 ) {
     if !timer.0.tick(time.delta()).just_finished() {
         return;
     }
     for tile in &tiles {
-        match tile.kind {
+        match tile {
             Tile::SmallHouse => {
                 wallet.0 += 10;
             }
@@ -106,9 +112,9 @@ fn setup(
     commands.spawn((Camera2dBundle::default(), IsDefaultUiCamera));
 
     setup_ui(&mut commands, &asset_server);
-    
-    put_tile(&mut commands, &asset_server, Tile::SmallHouse, (1, 0));
-    put_tile(&mut commands, &asset_server, Tile::PowerPlant, (1, 1));
+
+    put_tile(&mut commands, &asset_server, Tile::SmallHouse, Position(1, 0));
+    put_tile(&mut commands, &asset_server, Tile::PowerPlant, Position(1, 1));
 }
 
 fn setup_ui(commands: &mut Commands, asset_server: &Res<AssetServer> ) {
