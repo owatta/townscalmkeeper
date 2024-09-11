@@ -26,6 +26,9 @@ struct IncomeTimer(Timer);
 struct Label;
 
 #[derive(Component)]
+struct WalletLabel;
+
+#[derive(Component)]
 struct BuildingPanelTile;
 
 #[derive(Bundle)]
@@ -94,6 +97,16 @@ fn give_money(
     }
 }
 
+fn update_wallet_label(wallet: Res<Wallet>, mut labels: Query<&mut Text, With<WalletLabel>>) {
+    let text = labels.get_single_mut();
+    match text {
+        Ok(mut text) => {
+            text.sections[0].value = wallet.0.to_string();
+        }
+        Err(e) => warn!("Wallet label was not found. Error: {}", e),
+    }
+}
+
 fn main() {
     let _app = App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
@@ -101,7 +114,7 @@ fn main() {
         .insert_resource(IncomeTimer(Timer::from_seconds(5.0, TimerMode::Repeating)))
         .insert_resource(Wallet(0))
         .add_systems(Startup, setup)
-        .add_systems(Update, (update_tile_sprite_positions, give_money))
+        .add_systems(Update, (update_tile_sprite_positions, give_money, update_wallet_label))
         .add_systems(FixedUpdate, move_camera)
         .run();
 }
@@ -133,15 +146,15 @@ fn setup_ui(commands: &mut Commands, asset_server: &Res<AssetServer> ) {
         ..default()
     })
     .with_children(|parent| {
-            //     parent.spawn((
-            //         TextBundle::from_section("Text", TextStyle {
-            //             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-            //             font_size: 30.0,
-            //             color: Color::srgb(0.0, 0.0, 0.0),
-            //             ..default()
-            //         }),
-            //         WalletLabel,
-            //     ));
+            parent.spawn((
+                TextBundle::from_section("Text", TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 30.0,
+                    color: Color::srgb(0.0, 0.0, 0.0),
+                    ..default()
+                }),
+                WalletLabel,
+            ));
 
             parent
                 .spawn(NodeBundle {
