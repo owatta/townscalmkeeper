@@ -63,7 +63,15 @@ fn update_tile_sprite_positions(mut tiles: Query<(&Position, &mut Transform)>) {
 #[derive(Resource)]
 struct Wallet(i32);
 
-fn give_money(mut wallet: ResMut<Wallet>, tiles: Query<&TileBundle>) {
+fn give_money(
+    time: Res<Time>,
+    mut timer: ResMut<IncomeTimer>,
+    mut wallet: ResMut<Wallet>,
+    tiles: Query<&TileBundle>
+) {
+    if !timer.0.tick(time.delta()).just_finished() {
+        return;
+    }
     for tile in &tiles {
         match tile.kind {
             Tile::SmallHouse => {
@@ -76,14 +84,14 @@ fn give_money(mut wallet: ResMut<Wallet>, tiles: Query<&TileBundle>) {
 
 fn main() {
     let _app = App::new()
-	.add_plugins(DefaultPlugins
-		     .set(ImagePlugin::default_nearest()))
-	.insert_resource(ClearColor(Color::srgb(1.0, 1.0, 1.0)))
-	.insert_resource(IncomeTimer(Timer::from_seconds(5.0, TimerMode::Repeating)))
-	.add_systems(Startup, setup)
-	.add_systems(Update, update_tile_sprite_positions)
-	.add_systems(FixedUpdate, move_camera)
-	.run();
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .insert_resource(ClearColor(Color::srgb(1.0, 1.0, 1.0)))
+        .insert_resource(IncomeTimer(Timer::from_seconds(5.0, TimerMode::Repeating)))
+        .insert_resource(Wallet(0))
+        .add_systems(Startup, setup)
+        .add_systems(Update, (update_tile_sprite_positions, give_money))
+        .add_systems(FixedUpdate, move_camera)
+        .run();
 }
 
 fn setup(
