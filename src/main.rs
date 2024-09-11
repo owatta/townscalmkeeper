@@ -25,6 +25,9 @@ struct IncomeTimer(Timer);
 #[derive(Component)]
 struct Label;
 
+#[derive(Component)]
+struct BuildingPanelTile;
+
 #[derive(Bundle)]
 struct TileBundle {
     kind: Tile,
@@ -130,28 +133,52 @@ fn setup_ui(commands: &mut Commands, asset_server: &Res<AssetServer> ) {
         ..default()
     })
     .with_children(|parent| {
-        parent.spawn(NodeBundle {
+            //     parent.spawn((
+            //         TextBundle::from_section("Text", TextStyle {
+            //             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+            //             font_size: 30.0,
+            //             color: Color::srgb(0.0, 0.0, 0.0),
+            //             ..default()
+            //         }),
+            //         WalletLabel,
+            //     ));
+
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(100.0),
+                        border: UiRect::all(Val::Px(5.0)),
+                        ..default()
+                    },
+                    background_color: Color::srgb(0.65, 0.65, 0.65).into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    let cases = vec![Tile::SmallHouse, Tile::PowerPlant];
+                    for kind in cases {
+                        spawn_building_panel_tile(parent, &asset_server, kind);
+                    }
+                });
+        });
+}
+
+fn spawn_building_panel_tile(
+    parent: &mut ChildBuilder,
+    asset_server: &Res<AssetServer>,
+    kind: Tile
+) {
+    parent.spawn((
+        BuildingPanelTile,
+        ImageBundle {
             style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Px(100.),
-                border: UiRect::all(Val::Px(5.)),
+                border: UiRect::all(Val::Px(5.0)),
                 ..default()
             },
-            background_color: Color::srgb(0.65, 0.65, 0.65).into(),
+            image: UiImage { texture: asset_server.load(kind.sprite_path()), ..default() },
             ..default()
-        })
-        .with_children(|parent| {
-            parent.spawn((
-                TextBundle::from_section("Text", TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 30.0,
-                    color: Color::srgb(0.0, 0.0, 0.0),
-                    ..default()
-                }),
-                Label,
-            ));
-        });
-    });
+        },
+    ));
 }
 
 fn move_camera(
