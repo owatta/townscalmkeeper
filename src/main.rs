@@ -113,7 +113,7 @@ fn main() {
         .insert_resource(ClearColor(Color::srgb(1.0, 1.0, 1.0)))
         .insert_resource(IncomeTimer(Timer::from_seconds(5.0, TimerMode::Repeating)))
         .insert_resource(Wallet(0))
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, setup_ui))
         .add_systems(Update, (update_tile_sprite_positions, give_money, update_wallet_label))
         .add_systems(FixedUpdate, move_camera)
         .run();
@@ -127,13 +127,13 @@ fn setup(
     camera.projection.scaling_mode = ScalingMode::FixedVertical(1600.0);
     commands.spawn((Camera2dBundle::default(), IsDefaultUiCamera));
 
-    setup_ui(&mut commands, &asset_server);
+    // setup_ui(&mut commands, &asset_server);
 
     put_tile(&mut commands, &asset_server, Tile::SmallHouse, Position(1, 0));
     put_tile(&mut commands, &asset_server, Tile::PowerPlant, Position(1, 1));
 }
 
-fn setup_ui(commands: &mut Commands, asset_server: &Res<AssetServer>) {
+fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(NodeBundle {
             style: Style {
