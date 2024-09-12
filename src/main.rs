@@ -101,7 +101,7 @@ fn update_wallet_label(wallet: Res<Wallet>, mut labels: Query<&mut Text, With<Wa
     let text = labels.get_single_mut();
     match text {
         Ok(mut text) => {
-            text.sections[0].value = wallet.0.to_string();
+            text.sections[0].value = format!("Wallet: {}", wallet.0);
         }
         Err(e) => warn!("Wallet label was not found. Error: {}", e),
     }
@@ -133,29 +133,49 @@ fn setup(
     put_tile(&mut commands, &asset_server, Tile::PowerPlant, Position(1, 1));
 }
 
-fn setup_ui(commands: &mut Commands, asset_server: &Res<AssetServer> ) {
-    commands.spawn(NodeBundle {
-        style: Style {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            justify_content: JustifyContent::SpaceBetween,
-            // align_content: AlignContent::End,
-            align_items: AlignItems::End,
+fn setup_ui(commands: &mut Commands, asset_server: &Res<AssetServer>) {
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::SpaceBetween,
+                flex_wrap: FlexWrap::Wrap,
+                // align_content: AlignContent::End,
+                align_items: AlignItems::End,
+                ..default()
+            },
             ..default()
-        },
-        ..default()
-    })
-    .with_children(|parent| {
-            parent.spawn((
-                TextBundle::from_section("Text", TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 30.0,
-                    color: Color::srgb(0.0, 0.0, 0.0),
+        })
+        .with_children(|parent| {
+            // Top panel
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.),
+                        border: UiRect::all(Val::Px(5.)),
+                        align_self: AlignSelf::Start,
+                        ..default()
+                    },
+                    background_color: Color::srgb(0.65, 0.65, 0.65).into(),
                     ..default()
-                }),
-                WalletLabel,
-            ));
+                })
+                .with_children(|parent| {
+                    parent.spawn((
+                        WalletLabel,
+                        TextBundle::from_section(
+                            "Text",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 30.0,
+                                color: Color::srgb(0.0, 0.0, 0.0),
+                                ..default()
+                            },
+                        ),
+                    ));
+                });
 
+            // Bottom panel
             parent
                 .spawn(NodeBundle {
                     style: Style {
