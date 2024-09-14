@@ -182,7 +182,11 @@ fn setup(
     );
 }
 
-fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    panel_tiles: Res<BuildingPanelTiles>,
+) {
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -255,7 +259,7 @@ fn spawn_tile_button(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>,
             ButtonBundle {
                 style: Style {
                     height: Val::Percent(100.),
-                    margin: UiRect::all(Val::Px(5.)) ,
+                    margin: UiRect::all(Val::Px(5.)),
                     padding: DEFAULT_TILE_MARGIN,
                     ..default()
                 },
