@@ -6,8 +6,61 @@ const GRID_SIZE: (usize, usize) = (30, 30);
 
 const TILE_WIDTH: isize = 64;
 const CAMERA_SPEED: f32 = 300.0;
-const SELECTED_TILE_MARGIN: UiRect = UiRect::all(Val::Px(5.));
-const DEFAULT_TILE_MARGIN: UiRect = UiRect::all(Val::Px(10.));
+const SELECTED_TILE_HEIGHT: Val = Val::Percent(95.);
+const DEFAULT_TILE_HEIGHT: Val = Val::Percent(80.);
+const DEFAULT_TILE_COLOR: Color = Color::srgb(0.75, 0.75, 0.75);
+const SELECTED_TILE_COLOR: Color = Color::srgb(0.50, 0.50, 0.75);
+
+macro_rules! spawn_tile_button {
+    ($parent:expr,$asset_server:expr,$kind:expr) => {{
+        $parent
+            .spawn((
+                TileButton,
+                $kind.clone(),
+                ButtonBundle {
+                    style: Style {
+                        display: bevy::ui::Display::Grid,
+                        height: DEFAULT_TILE_HEIGHT,
+                        margin: UiRect::axes(Val::Px(5.), Val::Px(5.)),
+                        padding: UiRect::all(Val::Px(2.)),
+                        ..default()
+                    },
+                    background_color: BackgroundColor(Color::srgb(0.75, 0.75, 0.75)),
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn(ImageBundle {
+                    style: Style {
+                        grid_row: GridPlacement::start(1),
+                        ..default()
+                    },
+                    image: UiImage {
+                        texture: $asset_server.load($kind.sprite_path()),
+                        ..default()
+                    },
+                    ..default()
+                });
+                parent.spawn(
+                    TextBundle::from_section(
+                        format!("{} $", $kind.price()),
+                        TextStyle {
+                            font: $asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 18.0,
+                            color: Color::srgb(0.0, 0.0, 0.0),
+                            ..default()
+                        },
+                    )
+                    .with_style(Style {
+                        padding: UiRect::all(Val::Px(1.0)),
+                        grid_row: GridPlacement::start(2),
+                        justify_self: JustifySelf::Center,
+                        ..default()
+                    }),
+                );
+            });
+    }};
+}
 
 #[derive(Component, Clone, PartialEq, Eq, Debug)]
 enum Tile {
@@ -56,6 +109,20 @@ impl Tile {
 	    Tile::SmallHouse => "sprites/small_house.png".to_string(),
 	    Tile::PowerPlant => "sprites/powerplant.png".to_string(),
             _ => "sprites/empty.png".to_string(),
+        }
+    }
+
+    fn price(&self) -> i32 {
+        match &self {
+            Tile::SmallHouse => 20,
+            Tile::MediumHouse => 40,
+            Tile::BigHouse => 80,
+            Tile::Wiring => 10,
+            Tile::Plumbing => 10,
+            Tile::Road => 10,
+            Tile::PowerPlant => 40,
+            Tile::WaterSource => 40,
+            Tile::Empty => 0,
         }
     }
 }
@@ -123,18 +190,20 @@ fn select_panel_tile(
     panel_tiles: Res<BuildingPanelTiles>,
     mut selected_tile_button: ResMut<SelectedTileButton>,
     mut tile_transforms: Query<
-        (&Interaction, &mut Style, &Tile),
+        (&Interaction, &mut BackgroundColor, &mut Style, &Tile),
         (With<TileButton>, Changed<Interaction>),
     >,
 ) {
-    for (interaction, mut style, kind) in &mut tile_transforms {
-        style.padding = match interaction {
+    for (interaction, mut bg_color, mut style, kind) in &mut tile_transforms {
+        let (height, color) = match interaction {
             Interaction::Pressed => {
                 selected_tile_button.0 = panel_tiles.0.iter().position(|k| k == kind).unwrap();
-                SELECTED_TILE_MARGIN
+                (SELECTED_TILE_HEIGHT, SELECTED_TILE_COLOR)
             }
-            _ => DEFAULT_TILE_MARGIN,
-        }
+            _ => (DEFAULT_TILE_HEIGHT, DEFAULT_TILE_COLOR),
+        };
+        style.height = height;
+        bg_color.0  = color;
     }
 }
 
@@ -192,9 +261,8 @@ fn setup_ui(
             style: Style {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                justify_content: JustifyContent::SpaceBetween,
+                justify_content: JustifyContent::Center,
                 flex_wrap: FlexWrap::Wrap,
-                // align_content: AlignContent::End,
                 align_items: AlignItems::End,
                 ..default()
             },
@@ -217,7 +285,7 @@ fn setup_ui(
                     parent.spawn((
                         WalletLabel,
                         TextBundle::from_section(
-                            "Text",
+                            "Wallet: - $",
                             TextStyle {
                                 font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                 font_size: 30.0,
@@ -236,6 +304,8 @@ fn setup_ui(
                             width: Val::Percent(100.0),
                             height: Val::Px(100.0),
                             margin: UiRect::all(Val::Px(5.0)),
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::Center,
                             ..default()
                         },
                         background_color: Color::srgb(0.65, 0.65, 0.65).into(),
@@ -245,41 +315,12 @@ fn setup_ui(
                 ))
                 .with_children(|parent| {
                     for kind in &panel_tiles.0 {
-                        spawn_tile_button(parent, &asset_server, kind.clone());
+                        spawn_tile_button!(parent, asset_server, kind.clone());
                     }
                 });
         });
 }
 
-fn spawn_tile_button(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>, kind: Tile) {
-    parent
-        .spawn((
-            TileButton,
-            kind.clone(),
-            ButtonBundle {
-                style: Style {
-                    height: Val::Percent(100.),
-                    margin: UiRect::all(Val::Px(5.)),
-                    padding: DEFAULT_TILE_MARGIN,
-                    ..default()
-                },
-                ..default()
-            },
-        ))
-        .with_children(|parent| {
-            parent.spawn(ImageBundle {
-                style: Style {
-                    height: Val::Percent(90.),
-                    ..default()
-                },
-                image: UiImage {
-                    texture: asset_server.load(kind.sprite_path()),
-                    ..default()
-                },
-                ..default()
-            });
-        });
-}
 
 fn move_camera(
     mut query: Query<&mut Transform, With<Camera>>,
